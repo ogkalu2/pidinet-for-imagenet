@@ -2,11 +2,10 @@
 (Training, Generating edge maps)
 Pixel Difference Networks for Efficient Edge Detection (accepted as an ICCV 2021 oral)
 See paper in https://arxiv.org/abs/2108.07009
-
 Author: Zhuo Su, Wenzhe Liu
 Date: Aug 22, 2020
 """
-
+how do i delete running_file from this code after its done using it
 from __future__ import absolute_import
 from __future__ import unicode_literals
 from __future__ import print_function
@@ -18,11 +17,13 @@ import time
 import models
 from models.convert_pidinet import convert_pidinet
 from utils import *
-from edge_dataloader import BSDS_VOCLoader, BSDS_Loader, Multicue_Loader, NYUD_Loader, Custom_Loader
+from edge_dataloader import BSDS_VOCLoader, BSDS_Loader, Multicue_Loader, NYUD_Loader, Custom_Loader, image_dataset
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
 import torch
 import torchvision
+from torchvision import datasets
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
@@ -89,6 +90,11 @@ parser.add_argument('--evaluate-converted', action='store_true',
 
 args = parser.parse_args()
 
+path = args.datadir
+for root, dirs, files in os.walk(path):
+    if '.ipynb_checkpoints' in files:
+        file_path = os.path.join(root, '.ipynb_checkpoints')
+        os.remove(file_path)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
@@ -107,7 +113,7 @@ def main(running_file):
         args.lr_steps = list(map(int, args.lr_steps.split('-'))) 
 
     dataset_setting_choices = ['BSDS', 'NYUD-image', 'NYUD-hha', 'Multicue-boundary-1', 
-                'Multicue-boundary-2', 'Multicue-boundary-3', 'Multicue-edge-1', 'Multicue-edge-2', 'Multicue-edge-3', 'Custom']
+                'Multicue-boundary-2', 'Multicue-boundary-3', 'Multicue-edge-1', 'Multicue-edge-2', 'Multicue-edge-3', 'Custom','image_dataset']
     if not isinstance(args.dataset, list): 
         assert args.dataset in dataset_setting_choices, 'unrecognized data setting %s, please choose from %s' % (str(args.dataset), str(dataset_setting_choices))
         args.dataset = list(args.dataset.strip().split('-')) 
@@ -180,6 +186,9 @@ def main(running_file):
     elif 'Custom' == args.dataset[0]:
         train_dataset = Custom_Loader(root=args.datadir)
         test_dataset = Custom_Loader(root=args.datadir)
+    elif 'image_dataset' == args.dataset[0]:
+        train_dataset = image_dataset(root=args.datadir)
+        test_dataset = image_dataset(root=args.datadir)
     else:
         raise ValueError("unrecognized dataset setting")
 
@@ -240,7 +249,6 @@ def main(running_file):
             }, epoch, args.savedir, saveID, keep_freq=args.save_freq)
 
     return
-
 
 def train(train_loader, model, optimizer, epoch, running_file, args, running_lr):
     batch_time = AverageMeter()
@@ -313,7 +321,6 @@ def train(train_loader, model, optimizer, epoch, running_file, args, running_lr)
     str_loss = '%.4f' % (losses.avg)
     return str_loss
 
-
 def test(test_loader, model, epoch, running_file, args):
 
     from PIL import Image
@@ -322,10 +329,10 @@ def test(test_loader, model, epoch, running_file, args):
 
     if args.ablation:
         img_dir = os.path.join(args.savedir, 'eval_results_val', 'imgs_epoch_%03d' % (epoch - 1))
-        mat_dir = os.path.join(args.savedir, 'eval_results_val', 'mats_epoch_%03d' % (epoch - 1))
+        #mat_dir = os.path.join(args.savedir, 'eval_results_val', 'mats_epoch_%03d' % (epoch - 1))
     else:
-        img_dir = os.path.join(args.savedir, 'eval_results', 'imgs_epoch_%03d' % (epoch - 1))
-        mat_dir = os.path.join(args.savedir, 'eval_results', 'mats_epoch_%03d' % (epoch - 1))
+        img_dir = os.path.join(args.savedir)
+        #mat_dir = os.path.join(args.savedir, 'eval_results', 'mats_epoch_%03d' % (epoch - 1))
     eval_info = '\nBegin to eval...\nImg generated in %s\n' % img_dir
     print(eval_info)
     running_file.write('\n%s\n%s\n' % (str(args), eval_info))
@@ -334,12 +341,12 @@ def test(test_loader, model, epoch, running_file, args):
     else:
         print('%s already exits' % img_dir)
         #return
-    if not os.path.exists(mat_dir):
-        os.makedirs(mat_dir)
+    #if not os.path.exists(mat_dir):
+        #os.makedirs(mat_dir)
 
     for idx, (image, img_name) in enumerate(test_loader):
-
         img_name = img_name[0]
+
         with torch.no_grad():
             image = image.cuda() if args.use_cuda else image
             _, _, H, W = image.shape
@@ -350,9 +357,9 @@ def test(test_loader, model, epoch, running_file, args):
         for i in range(len(results)):
           results_all[i, 0, :, :] = results[i]
 
-        torchvision.utils.save_image(1-results_all, 
-                os.path.join(img_dir, "%s.jpg" % img_name))
-        sio.savemat(os.path.join(mat_dir, '%s.mat' % img_name), {'img': result})
+        #torchvision.utils.save_image(1-results_all, 
+                #os.path.join(img_dir, "%s.jpg" % img_name))
+        #sio.savemat(os.path.join(mat_dir, '%s.mat' % img_name), {'img': result})
         result = Image.fromarray((result * 255).astype(np.uint8))
         result.save(os.path.join(img_dir, "%s.png" % img_name))
         runinfo = "Running test [%d/%d]" % (idx + 1, len(test_loader))
@@ -368,10 +375,10 @@ def multiscale_test(test_loader, model, epoch, running_file, args):
 
     if args.ablation:
         img_dir = os.path.join(args.savedir, 'eval_results_val', 'imgs_epoch_%03d_ms' % (epoch - 1))
-        mat_dir = os.path.join(args.savedir, 'eval_results_val', 'mats_epoch_%03d_ms' % (epoch - 1))
+        #mat_dir = os.path.join(args.savedir, 'eval_results_val', 'mats_epoch_%03d_ms' % (epoch - 1))
     else:
-        img_dir = os.path.join(args.savedir, 'eval_results', 'imgs_epoch_%03d_ms' % (epoch - 1))
-        mat_dir = os.path.join(args.savedir, 'eval_results', 'mats_epoch_%03d_ms' % (epoch - 1))
+        img_dir = os.path.join(args.savedir)
+        #mat_dir = os.path.join(args.savedir, 'eval_results', 'mats_epoch_%03d_ms' % (epoch - 1))
     eval_info = '\nBegin to eval...\nImg generated in %s\n' % img_dir
     print(eval_info)
     running_file.write('\n%s\n%s\n' % (str(args), eval_info))
@@ -380,12 +387,12 @@ def multiscale_test(test_loader, model, epoch, running_file, args):
     else:
         print('%s already exits' % img_dir)
         return
-    if not os.path.exists(mat_dir):
-        os.makedirs(mat_dir)
+    #if not os.path.exists(mat_dir):
+        #os.makedirs(mat_dir)
 
     for idx, (image, img_name) in enumerate(test_loader):
         img_name = img_name[0]
-
+   
         image = image[0]
         image_in = image.numpy().transpose((1,2,0))
         scale = [0.5, 1, 1.5]
@@ -402,14 +409,14 @@ def multiscale_test(test_loader, model, epoch, running_file, args):
                 multi_fuse += fuse
             multi_fuse = multi_fuse / len(scale)
 
-        sio.savemat(os.path.join(mat_dir, '%s.mat' % img_name), {'img': multi_fuse})
+        #sio.savemat(os.path.join(mat_dir, '%s.mat' % img_name), {'img': multi_fuse})
         result = Image.fromarray((multi_fuse * 255).astype(np.uint8))
         result.save(os.path.join(img_dir, "%s.png" % img_name))
         runinfo = "Running test [%d/%d]" % (idx + 1, len(test_loader))
         print(runinfo)
         running_file.write('%s\n' % runinfo)
     running_file.write('\nDone\n')
-
+    
 if __name__ == '__main__':
     os.makedirs(args.savedir, exist_ok=True)
     running_file = os.path.join(args.savedir, '%s_running-%s.txt' \
