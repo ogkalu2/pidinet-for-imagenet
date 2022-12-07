@@ -312,6 +312,10 @@ class image_dataset(data.Dataset):
             folder_path = os.path.join(self.root, folder_name)
             for image_name in os.listdir(folder_path):
                 image_path = os.path.join(folder_path, image_name)
+                # Open the image and skip if it is not in RGB format
+                image = Image.open(image_path)
+                if image.mode != "RGB":
+                    continue
                 self.image_paths.append(image_path)
 
     def __len__(self):
