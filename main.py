@@ -91,9 +91,16 @@ args = parser.parse_args()
 
 path = args.datadir
 for root, dirs, files in os.walk(path):
-    if '.ipynb_checkpoints' in files:
-        file_path = os.path.join(root, '.ipynb_checkpoints')
-        os.remove(file_path)
+    file_path = os.path.join(root, '.ipynb_checkpoints')
+    if os.path.isdir(file_path):
+        # This is a directory, so use shutil.rmtree() to delete it
+        shutil.rmtree(file_path)
+    else:
+        # This is a file, so use os.remove() to delete it
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
