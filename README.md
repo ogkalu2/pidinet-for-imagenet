@@ -1,6 +1,6 @@
 Note: I made changes to be able to generate edge maps for imagenet datasets downloaded with this tool - https://github.com/mf1024/ImageNet-Datasets-Downloader.
 It only outputs edge maps (the png files) in a single directory. Essentially now , you point it to the directory of your imagenet dataset using the argument 
-"-dataset image_dataset" and it spits out all the edge maps in the dataset in a single separate folder. The edge maps have the same names as the imagenet images but are png files. I did this so i could more easily replicate this paper - https://sketch-guided-diffusion.github.io/
+"--dataset image_dataset" and it spits out all the edge maps in the dataset in a single separate folder. The edge maps have the same names as the imagenet images but are png files. I did this so i could more easily replicate this paper - https://sketch-guided-diffusion.github.io/
 
 # Pixel Difference Convolution
 
