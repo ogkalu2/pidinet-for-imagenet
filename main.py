@@ -5,7 +5,6 @@ See paper in https://arxiv.org/abs/2108.07009
 Author: Zhuo Su, Wenzhe Liu
 Date: Aug 22, 2020
 """
-how do i delete running_file from this code after its done using it
 from __future__ import absolute_import
 from __future__ import unicode_literals
 from __future__ import print_function
