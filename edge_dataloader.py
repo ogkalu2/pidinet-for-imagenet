@@ -296,3 +296,37 @@ class Custom_Loader(data.Dataset):
         filename = Path(self.imgList[index]).stem
 
         return img, filename
+
+class image_dataset(data.Dataset):
+    def __init__(self, root='data/'):
+        self.root = root
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            normalize])
+
+        # Load all the image file paths from the subfolders of the root directory
+        self.image_paths = []
+        for folder_name in os.listdir(self.root):
+            folder_path = os.path.join(self.root, folder_name)
+            for image_name in os.listdir(folder_path):
+                image_path = os.path.join(folder_path, image_name)
+                self.image_paths.append(image_path)
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        # Load the image at the given index
+        image_path = self.image_paths[idx]
+        image = Image.open(image_path)
+
+        # Get the filename from the image path and remove the file extension
+        filename = os.path.splitext(os.path.basename(image_path))[0]
+
+        # Apply any transform if given
+        if self.transform:
+            image = self.transform(image)
+
+        return image, filename
